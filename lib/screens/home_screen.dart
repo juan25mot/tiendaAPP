@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../config/theme.dart';
 import '../data/products_data.dart';
 import '../models/product.dart';
 import '../providers/cart_provider.dart';
+import '../widgets/product_card.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../widgets/bottom_nav_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,42 +33,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartProvider>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('SurfShop'),
-        actions: [
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.shopping_cart_outlined),
-                onPressed: () => context.go('/cart'),
-              ),
-              if (cart.itemCount > 0)
-                Positioned(
-                  right: 6,
-                  top: 6,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '${cart.itemCount}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            onPressed: () => context.go('/profile'),
-          ),
-        ],
+        // ✅ ELIMINADOS todos los botones del AppBar
+        // Solo queda el título
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -95,9 +67,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
               const SizedBox(height: 16),
+
               // Banner carrusel
               const _BannerCarousel(),
               const SizedBox(height: 16),
+
               // Filtros de categoría
               SizedBox(
                 height: 40,
@@ -119,6 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+
               // Grid de productos
               if (_filteredProducts.isEmpty)
                 const Center(
@@ -149,88 +124,77 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                 ),
+
+              // Footer
+              const SizedBox(height: 40),
+              _buildFooter(context),
             ],
           ),
         ),
       ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: 0,
+        cartItemCount: cart.itemCount,
+      ),
     );
   }
-}
 
-// Widget ProductCard (puede estar en el mismo archivo o separado)
-class ProductCard extends StatelessWidget {
-  final Product product;
-  final VoidCallback onTap;
-
-  const ProductCard({super.key, required this.product, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Card(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Imagen con Hero
-            Expanded(
-              child: Hero(
-                tag: 'product-${product.id}',
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                  child: Image.network(
-                    product.imageUrl,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    errorBuilder: (_, __, ___) =>
-                        const Icon(Icons.image_not_supported, size: 60),
-                  ),
-                ),
-              ),
+  Widget _buildFooter(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: Colors.grey.shade300)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'SurfShop',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
             ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '\$${product.price.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      const Icon(Icons.star, size: 16, color: Colors.amber),
-                      Text('${product.rating}'),
-                      const SizedBox(width: 8),
-                      Text(
-                        '(${product.reviewCount})',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Todo para tu aventura en el mar 🌊',
+            style: TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: const FaIcon(FontAwesomeIcons.facebook, size: 24),
+                onPressed: () {},
+                color: Colors.grey[600],
               ),
-            ),
-          ],
-        ),
+              IconButton(
+                icon: const FaIcon(FontAwesomeIcons.instagram, size: 24),
+                onPressed: () {},
+                color: Colors.grey[600],
+              ),
+              IconButton(
+                icon: const FaIcon(FontAwesomeIcons.youtube, size: 24),
+                onPressed: () {},
+                color: Colors.grey[600],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '© 2026 SurfShop. Todos los derechos reservados.',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+        ],
       ),
     );
   }
 }
 
-// Widget para el carrusel de banners
+// ============================================================
+//  🧩 Widget del carrusel de banners
+// ============================================================
 class _BannerCarousel extends StatefulWidget {
   const _BannerCarousel();
 
@@ -244,14 +208,15 @@ class _BannerCarouselState extends State<_BannerCarousel> {
 
   final List<String> _banners = [
     'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
-    'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=800',
-    'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=800',
+    'https://theindianface.com/cdn/shop/articles/2_5bb62d88-2795-4d66-b0a2-107590e6569c.jpg?v=1650970753',
+    'https://iso.500px.com/wp-content/uploads/2015/01/re-magic.jpg',
+    'https://ichef.bbci.co.uk/ace/ws/640/amz/worldservice/live/assets/images/2015/08/25/150825150249_surfing_640x360_epa_nocredit.jpg.webp',
+    'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/30/dc/f2/2a/caption.jpg?w=500&h=400&s=1',
   ];
 
   @override
   void initState() {
     super.initState();
-    // Auto-play cada 4 segundos
     Future.doWhile(() async {
       await Future.delayed(const Duration(seconds: 4));
       if (!mounted) return false;
@@ -269,6 +234,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       children: [
         SizedBox(
@@ -297,7 +263,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
             height: 8,
             decoration: BoxDecoration(
               color: _current == i
-                  ? AppTheme.primaryColor
+                  ? theme.primaryColor
                   : Colors.grey.shade300,
               borderRadius: BorderRadius.circular(4),
             ),
@@ -307,3 +273,4 @@ class _BannerCarouselState extends State<_BannerCarousel> {
     );
   }
 }
+

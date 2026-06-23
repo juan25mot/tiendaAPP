@@ -4,6 +4,7 @@ import '../screens/home_screen.dart';
 import '../screens/product_detail_screen.dart';
 import '../screens/cart_screen.dart';
 import '../screens/profile_screen.dart';
+import '../screens/favorites_screen.dart'; // ← import correcto
 
 final appRouter = GoRouter(
   initialLocation: '/login',
@@ -30,6 +31,11 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/profile',
       builder: (context, state) => const ProfileScreen(),
+    ),
+    // ✅ NUEVA RUTA PARA FAVORITOS
+    GoRoute(
+      path: '/favorites',
+      builder: (context, state) => const FavoritesScreen(),
     ),
   ],
 );

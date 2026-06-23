@@ -3,9 +3,33 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../models/cart_item.dart';
+import '../models/product.dart';
+import '../utils/formatters.dart';
+import '../widgets/bottom_nav_bar.dart'; // ← AGREGAR
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
+
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  void _showUndoSnackBar(BuildContext context, String productName, Product product) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$productName eliminado'),
+        duration: const Duration(seconds: 3),
+        action: SnackBarAction(
+          label: 'Deshacer',
+          onPressed: () {
+            context.read<CartProvider>().addProduct(product);
+          },
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,17 +48,32 @@ class CartScreen extends StatelessWidget {
         ],
       ),
       body: items.isEmpty
-          ? const Center(
+          ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('Tu carrito está vacío',
-                      style: TextStyle(fontSize: 18, color: Colors.grey)),
-                  SizedBox(height: 8),
-                  Text('¡Agrega productos para empezar!',
-                      style: TextStyle(color: Colors.grey)),
+                  const Icon(Icons.shopping_cart_outlined,
+                      size: 80, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Tu carrito está vacío',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '¡Agrega productos para empezar!',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => context.go('/home'),
+                    icon: const Icon(Icons.shopping_bag_outlined),
+                    label: const Text('Ir a comprar'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                    ),
+                  ),
                 ],
               ),
             )
@@ -55,28 +94,27 @@ class CartScreen extends StatelessWidget {
                           child: const Icon(Icons.delete, color: Colors.white),
                         ),
                         onDismissed: (_) {
-                          context.read<CartProvider>().removeProduct(item.product.id);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('${item.product.name} eliminado'),
-                              action: SnackBarAction(
-                                label: 'Deshacer',
-                                onPressed: () {
-                                  context.read<CartProvider>().addProduct(item.product);
-                                },
-                              ),
-                            ),
-                          );
+                          context
+                              .read<CartProvider>()
+                              .removeProduct(item.product.id);
+                          _showUndoSnackBar(context, item.product.name, item.product);
                         },
-                        child: CartItemTile(item: item),
+                        child: CartItemTile(
+                          item: item,
+                          onUndo: (product) => _showUndoSnackBar(context, product.name, product),
+                        ),
                       );
                     },
                   ),
                 ),
-                // Resumen y botón de compra
                 _CartSummary(),
               ],
             ),
+      // ✅ USAR BottomNavBar
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: 2,
+        cartItemCount: cart.itemCount,
+      ),
     );
   }
 
@@ -85,7 +123,8 @@ class CartScreen extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Vaciar carrito'),
-        content: const Text('¿Estás seguro de que quieres eliminar todos los productos?'),
+        content: const Text(
+            '¿Estás seguro de que quieres eliminar todos los productos?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -104,10 +143,15 @@ class CartScreen extends StatelessWidget {
   }
 }
 
-// Widget para cada ítem del carrito
 class CartItemTile extends StatelessWidget {
   final CartItem item;
-  const CartItemTile({super.key, required this.item});
+  final Function(Product) onUndo;
+
+  const CartItemTile({
+    super.key,
+    required this.item,
+    required this.onUndo,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -138,7 +182,7 @@ class CartItemTile extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    '\$${item.product.price.toStringAsFixed(0)}',
+                    formatPrice(item.product.price),
                     style: TextStyle(color: Theme.of(context).primaryColor),
                   ),
                 ],
@@ -147,9 +191,11 @@ class CartItemTile extends StatelessWidget {
             Row(
               children: [
                 IconButton(
-                  onPressed: () {
-                    context.read<CartProvider>().removeOne(item.product.id);
-                  },
+                  onPressed: item.quantity > 1
+                      ? () {
+                          context.read<CartProvider>().removeOne(item.product.id);
+                        }
+                      : null,
                   icon: const Icon(Icons.remove_circle_outline),
                 ),
                 Text('${item.quantity}'),
@@ -158,6 +204,15 @@ class CartItemTile extends StatelessWidget {
                     context.read<CartProvider>().addProduct(item.product);
                   },
                   icon: const Icon(Icons.add_circle_outline),
+                ),
+                IconButton(
+                  onPressed: () {
+                    context
+                        .read<CartProvider>()
+                        .removeProduct(item.product.id);
+                    onUndo(item.product);
+                  },
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
                 ),
               ],
             ),
@@ -168,7 +223,6 @@ class CartItemTile extends StatelessWidget {
   }
 }
 
-// Resumen del carrito
 class _CartSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -176,7 +230,7 @@ class _CartSummary extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.2),
@@ -193,7 +247,7 @@ class _CartSummary extends StatelessWidget {
             children: [
               const Text('Subtotal',
                   style: TextStyle(fontSize: 16, color: Colors.grey)),
-              Text('\$${cart.totalPrice.toStringAsFixed(0)}',
+              Text(formatPrice(cart.totalPrice),
                   style: const TextStyle(fontSize: 16)),
             ],
           ),
@@ -203,7 +257,7 @@ class _CartSummary extends StatelessWidget {
             children: [
               const Text('Envío',
                   style: TextStyle(fontSize: 16, color: Colors.grey)),
-              const Text('\$5.000', style: TextStyle(fontSize: 16)),
+              Text(formatPrice(5000), style: const TextStyle(fontSize: 16)),
             ],
           ),
           const Divider(height: 20),
@@ -212,7 +266,7 @@ class _CartSummary extends StatelessWidget {
             children: [
               const Text('Total',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              Text('\$${(cart.totalPrice + 5000).toStringAsFixed(0)}',
+              Text(formatPrice(cart.totalPrice + 5000),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -221,12 +275,32 @@ class _CartSummary extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: cart.items.isEmpty ? null : () => _onCheckout(context),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 50),
-            ),
-            child: const Text('Finalizar compra'),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => context.go('/home'),
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('Seguir comprando'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey[300],
+                    foregroundColor: Colors.black,
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed:
+                      cart.items.isEmpty ? null : () => _onCheckout(context),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
+                  child: const Text('Finalizar compra'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -241,7 +315,7 @@ class _CartSummary extends StatelessWidget {
         title: const Text('Confirmar pedido'),
         content: Text(
           '¿Confirmas tu pedido por '
-          '\$${(cart.totalPrice + 5000).toStringAsFixed(0)}?',
+          '${formatPrice(cart.totalPrice + 5000)}?',
         ),
         actions: [
           TextButton(

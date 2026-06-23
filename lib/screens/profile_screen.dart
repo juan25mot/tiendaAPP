@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/theme_provider.dart';
+import '../widgets/bottom_nav_bar.dart'; // ← AGREGAR
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -13,10 +15,13 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _notificaciones = true;
   bool _ofertas = false;
-  bool _modoOscuro = false;
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDark = themeProvider.isDark;
+    final cart = context.watch<CartProvider>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mi perfil'),
@@ -45,21 +50,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ),
-          SwitchListTile(
-            title: const Text('Notificaciones'),
-            subtitle: const Text('Recibir alertas de pedidos'),
-            value: _notificaciones,
-            onChanged: (v) => setState(() => _notificaciones = v),
-          ),
-          SwitchListTile(
-            title: const Text('Ofertas y promociones'),
-            value: _ofertas,
-            onChanged: (v) => setState(() => _ofertas = v),
-          ),
-          SwitchListTile(
-            title: const Text('Modo oscuro'),
-            value: _modoOscuro,
-            onChanged: (v) => setState(() => _modoOscuro = v),
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Column(
+              children: [
+                SwitchListTile(
+                  title: const Text('Notificaciones'),
+                  subtitle: const Text('Recibir alertas de pedidos'),
+                  value: _notificaciones,
+                  onChanged: (v) => setState(() => _notificaciones = v),
+                ),
+                SwitchListTile(
+                  title: const Text('Ofertas y promociones'),
+                  value: _ofertas,
+                  onChanged: (v) => setState(() => _ofertas = v),
+                ),
+                SwitchListTile(
+                  title: const Text('Modo oscuro'),
+                  value: isDark,
+                  onChanged: (v) => themeProvider.toggleTheme(),
+                ),
+              ],
+            ),
           ),
           const Divider(),
           ListTile(
@@ -67,11 +79,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title: const Text('Cerrar sesión',
                 style: TextStyle(color: Colors.red)),
             onTap: () {
-              context.read<CartProvider>().clear();
-              context.go('/login');
+              showDialog(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text('Cerrar sesión'),
+                  content: const Text('¿Estás seguro que deseas salir?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancelar'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.read<CartProvider>().clear();
+                        Navigator.pop(context);
+                        context.go('/login');
+                      },
+                      child: const Text('Salir'),
+                    ),
+                  ],
+                ),
+              );
             },
           ),
         ],
+      ),
+      // ✅ USAR BottomNavBar
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: 3,
+        cartItemCount: cart.itemCount,
       ),
     );
   }

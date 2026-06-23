@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../config/theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,8 +21,11 @@ class _LoginScreenState extends State<LoginScreen> {
   void _onLogin() {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      // Simular llamado asíncrono
+
       Future.delayed(const Duration(seconds: 1), () {
+        // ✅ Verificar que el widget sigue montado antes de usar el contexto
+        if (!mounted) return;
+
         setState(() => _isLoading = false);
         if (_emailController.text == kDemoEmail &&
             _passwordController.text == kDemoPassword) {
@@ -42,6 +44,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -54,14 +58,14 @@ class _LoginScreenState extends State<LoginScreen> {
               Icon(
                 Icons.surfing,
                 size: 80,
-                color: AppTheme.primaryColor,
+                color: theme.primaryColor, // ✅ dinámico
               ),
               const SizedBox(height: 16),
               Text(
                 'SurfShop',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
+                      color: theme.primaryColor, // ✅ dinámico
                     ),
               ),
               const Text(
@@ -69,7 +73,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
               const SizedBox(height: 40),
-              // Campo email
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -88,7 +91,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              // Campo contraseña
               TextFormField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
@@ -117,7 +119,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
               ),
               const SizedBox(height: 24),
-              // Botón login
               ElevatedButton(
                 onPressed: _isLoading ? null : _onLogin,
                 style: ElevatedButton.styleFrom(
@@ -137,10 +138,10 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 16),
               TextButton(
                 onPressed: () {
-                  // Aquí podrías navegar a registro, pero no está en el alcance
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Registro no implementado. Usa las credenciales demo.'),
+                      content: Text(
+                          'Registro no implementado. Usa las credenciales demo.'),
                     ),
                   );
                 },
